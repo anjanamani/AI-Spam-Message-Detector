@@ -21,52 +21,49 @@ st.set_page_config(
 def load_model():
     return joblib.load("spam_model.pkl")
 
-try:
-    model = load_model()
-except Exception as e:
-    st.error(f"Unable to load model: {e}")
-    st.stop()
+model = load_model()
 
 # --------------------------------
-# APPLICATION HEADING
+# SESSION STATE
 # --------------------------------
 
-st.title("📩 AI Spam Message Detector")
+if "page" not in st.session_state:
+    st.session_state.page = "Dashboard"
 
-st.write(
-    "An intelligent SMS classification system "
-    "using Natural Language Processing and Machine Learning."
-)
-
-st.divider()
+def navigate(page):
+    st.session_state.page = page
 
 # --------------------------------
-# SIDEBAR
+# SIDEBAR NAVIGATION
 # --------------------------------
 
-st.sidebar.title("Navigation")
+st.sidebar.title("📩 Navigation")
 
-page = st.sidebar.radio(
-    "Choose a feature",
-    ["Dashboard", "Single Detection", "Bulk Detection"]
-)
+if st.sidebar.button("🏠 Dashboard", use_container_width=True):
+    navigate("Dashboard")
+
+if st.sidebar.button("🔍 Single Detection", use_container_width=True):
+    navigate("Single Detection")
+
+if st.sidebar.button("📂 Bulk Detection", use_container_width=True):
+    navigate("Bulk Detection")
 
 # --------------------------------
 # DASHBOARD
 # --------------------------------
 
-if page == "Dashboard":
+if st.session_state.page == "Dashboard":
 
-    st.header("📊 Project Dashboard")
+    st.title("📩 AI Spam Message Detector")
 
     st.write(
-        "Detect spam messages using machine learning. "
-        "Enter an SMS or upload a CSV file for classification."
+        "An intelligent SMS classification system "
+        "using Machine Learning and NLP."
     )
 
-    st.success("Best Performing Model: Support Vector Machine (SVM)")
+    st.divider()
 
-    st.subheader("Model Performance")
+    st.header("📊 Model Performance")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -75,48 +72,69 @@ if page == "Dashboard":
     col3.metric("Recall", "89.90%")
     col4.metric("F1-Score", "93.40%")
 
+    st.success("Best Performing Model: Support Vector Machine (SVM)")
+
     st.divider()
 
-    st.subheader("Algorithms Compared")
+    st.header("🚀 Choose Detection Mode")
 
-    st.write("- Multinomial Naive Bayes")
-    st.write("- Logistic Regression")
-    st.write("- Support Vector Machine (SVM)")
+    col1, col2 = st.columns(2)
 
-    st.subheader("Project Features")
+    with col1:
+        with st.container(border=True):
+            st.subheader("🔍 Single SMS Detection")
 
-    col1, col2, col3 = st.columns(3)
+            st.write(
+                "Enter one SMS message and check whether "
+                "it is Spam or Normal."
+            )
 
-    col1.metric("Detection Modes", "2")
-    col2.metric("Algorithms Compared", "3")
-    col3.metric("Output Classes", "2")
+            if st.button(
+                "Open Single Detection →",
+                use_container_width=True
+            ):
+                navigate("Single Detection")
+                st.rerun()
 
-    st.info(
-        "The SVM classifier was selected based on its "
-        "Spam F1-score of 93.4%."
-    )
+    with col2:
+        with st.container(border=True):
+            st.subheader("📂 Bulk SMS Detection")
+
+            st.write(
+                "Upload a CSV file to classify multiple "
+                "SMS messages at once."
+            )
+
+            if st.button(
+                "Open Bulk Detection →",
+                use_container_width=True
+            ):
+                navigate("Bulk Detection")
+                st.rerun()
 
 # --------------------------------
-# SINGLE DETECTION
+# SINGLE DETECTION PAGE
 # --------------------------------
 
-elif page == "Single Detection":
+elif st.session_state.page == "Single Detection":
 
-    st.header("🔍 Single Message Detection")
+    st.title("🔍 Single SMS Detection")
+
+    if st.button("← Back to Dashboard"):
+        navigate("Dashboard")
+        st.rerun()
 
     message = st.text_area(
         "Enter your SMS message:",
-        placeholder="Example: Congratulations! You have won a free prize."
+        placeholder="Enter your message here..."
     )
 
     if st.button("Check Message", type="primary"):
 
         if not message.strip():
-
             st.warning("Please enter a message.")
 
         else:
-
             prediction = model.predict([message])[0]
 
             probabilities = model.predict_proba([message])[0]
@@ -127,11 +145,8 @@ elif page == "Single Detection":
             spam_probability = probabilities[spam_index] * 100
 
             if prediction == 1:
-
                 st.error("⚠️ This is a SPAM message!")
-
             else:
-
                 st.success("✅ This is a NORMAL message!")
 
             st.metric(
@@ -142,12 +157,16 @@ elif page == "Single Detection":
             st.progress(float(spam_probability / 100))
 
 # --------------------------------
-# BULK DETECTION
+# BULK DETECTION PAGE
 # --------------------------------
 
-elif page == "Bulk Detection":
+elif st.session_state.page == "Bulk Detection":
 
-    st.header("📂 Bulk Message Detection")
+    st.title("📂 Bulk SMS Detection")
+
+    if st.button("← Back to Dashboard"):
+        navigate("Dashboard")
+        st.rerun()
 
     st.write(
         "Upload a CSV file containing a column named 'message'."
@@ -161,35 +180,21 @@ elif page == "Bulk Detection":
     if uploaded_file is not None:
 
         try:
-
             data = pd.read_csv(uploaded_file)
 
             if "message" not in data.columns:
-
-                st.error(
-                    "CSV must contain a column named 'message'."
-                )
+                st.error("CSV must contain a 'message' column.")
 
             elif data.empty:
-
                 st.warning("The CSV file is empty.")
 
             else:
-
-                # Handle missing messages
-                messages = (
-                    data["message"]
-                    .fillna("")
-                    .astype(str)
-                )
+                messages = data["message"].fillna("").astype(str)
 
                 if (messages.str.strip() == "").all():
-
                     st.warning("No valid messages found.")
 
                 else:
-
-                    # Predictions
                     predictions = model.predict(messages)
 
                     probabilities = model.predict_proba(messages)
@@ -211,7 +216,6 @@ elif page == "Bulk Detection":
                         for value in spam_probabilities
                     ]
 
-                    # Metrics
                     spam_count = (
                         data["prediction"] == "Spam"
                     ).sum()
@@ -228,7 +232,6 @@ elif page == "Bulk Detection":
                     col2.metric("Spam Messages", spam_count)
                     col3.metric("Normal Messages", normal_count)
 
-                    # Results
                     st.subheader("Classification Results")
 
                     st.dataframe(
@@ -236,7 +239,6 @@ elif page == "Bulk Detection":
                         use_container_width=True
                     )
 
-                    # Chart
                     chart_data = pd.DataFrame({
                         "Category": ["Spam", "Normal"],
                         "Count": [spam_count, normal_count]
@@ -248,7 +250,6 @@ elif page == "Bulk Detection":
                         chart_data.set_index("Category")
                     )
 
-                    # Download
                     csv = data.to_csv(
                         index=False
                     ).encode("utf-8")
@@ -261,5 +262,4 @@ elif page == "Bulk Detection":
                     )
 
         except Exception as e:
-
-            st.error(f"Error processing CSV file: {e}")
+            st.error(f"Error processing CSV: {e}")
