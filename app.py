@@ -33,20 +33,6 @@ if "page" not in st.session_state:
 def navigate(page):
     st.session_state.page = page
 
-# --------------------------------
-# SIDEBAR NAVIGATION
-# --------------------------------
-
-st.sidebar.title("📩 Navigation")
-
-if st.sidebar.button("🏠 Dashboard", use_container_width=True):
-    navigate("Dashboard")
-
-if st.sidebar.button("🔍 Single Detection", use_container_width=True):
-    navigate("Single Detection")
-
-if st.sidebar.button("📂 Bulk Detection", use_container_width=True):
-    navigate("Bulk Detection")
 
 # --------------------------------
 # DASHBOARD
